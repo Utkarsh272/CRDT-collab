@@ -137,17 +137,6 @@ Integration tests will cover:
 
 ---
 
-## Timeline
-
-This is Project 3 of a [4-project portfolio](https://github.com/Utkarsh272), starting ~Week 7 of a 10-week build plan. Projects 1 and 2 are prerequisites:
-
-- ✅ Project 1: [RAG with Grounded Citations](https://github.com/Utkarsh272/rag-grounded) — live
-- 🏗️ Project 2: [Mini-Kafka](https://github.com/Utkarsh272/mini-kafka) — in progress
-- 🔲 **Project 3: CRDT Collaborative Document** — this repo
-- 🔲 Project 4: [Distributed Rate Limiter](https://github.com/Utkarsh272/distributed-rate-limiter)
-
----
-
 ## Honest Scale Note
 
 The design targets 10 concurrent users per document on a single Fly.io instance. Beyond ~50, you'd need to shard documents across server instances or use `y-redis` for fan-out. That's documented in `DESIGN.md` as a known scaling boundary, not a bug.
