@@ -1,0 +1,62 @@
+# fly.toml — ws-server deployment on Fly.io
+# Deploy with: fly deploy --config fly/fly.toml (from packages/ws-server/)
+#
+# Free tier: 1x shared-cpu-1x, 256MB RAM
+# Sticky sessions enabled so WebSocket clients reconnect to the same instance.
+
+app = "crdt-collab-ws"
+primary_region = "ewr"   # Newark — closest to NYC
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+# Secrets (set via `fly secrets set KEY=value`, never in this file):
+#   DATABASE_URL
+#   SUPABASE_JWT_SECRET
+#   ALLOWED_ORIGINS
+#   FRONTEND_URL
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  # Sticky sessions — critical for WebSocket: ensures a client always
+  # reconnects to the same machine (same in-memory Yjs room state).
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 500
+    soft_limit = 400
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+    protocol = "http"
+
+[mounts]
+  # No persistent volume needed — state is in Postgres
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

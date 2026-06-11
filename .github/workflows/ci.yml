@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ws-server-test:
+    name: WS Server — Test + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ws-server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  web-build:
+    name: Web — TypeScript + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/web
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder_anon_key
+      NEXT_PUBLIC_API_URL: http://localhost:1234
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit
+
+      - name: Build
+        run: pnpm build
+
+  docker:
+    name: Docker — WS Server Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ws-server image
+        uses: docker/build-push-action@v5
+        with:
+          context: packages/ws-server
+          push: false
+          tags: crdt-collab-ws:latest
+
+  deploy-ws:
+    name: Deploy WS Server → Fly.io
+    runs-on: ubuntu-latest
+    needs: [ws-server-test, docker]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --config fly/fly.toml --remote-only
+        working-directory: packages/ws-server
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

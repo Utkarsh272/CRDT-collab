@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: crdt
+      POSTGRES_PASSWORD: crdt
+      POSTGRES_DB: crdt_collab
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crdt -d crdt_collab"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ws-server:
+    build:
+      context: ./packages/ws-server
+      target: builder          # Use builder stage (includes devDeps for tsx)
+    ports:
+      - "1234:8080"
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgresql://crdt:crdt@postgres:5432/crdt_collab
+      NODE_ENV: development
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-dev_jwt_secret}
+      ALLOWED_ORIGINS: "http://localhost:3000"
+      FRONTEND_URL: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["node", "dist/server.js"]
+
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:
+  promdata:
+  grafanadata:

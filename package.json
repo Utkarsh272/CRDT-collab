@@ -1,0 +1,12 @@
+{
+  "name": "crdt-collab",
+  "private": true,
+  "version": "0.0.1",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter './packages/*' dev",
+    "build": "pnpm --filter './packages/*' build",
+    "lint": "pnpm --filter './packages/*' lint",
+    "test": "pnpm --filter './packages/*' test"
+  }
+}
